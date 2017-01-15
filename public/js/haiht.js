@@ -3,20 +3,21 @@ $(document).ready(function () {
     var limit = 100;
     var totalInsertedRow = 0;
 
-    $('#btnStart').click(function () {
-        start();
+    $('#btnFilterFb').click(function () {
+        startFilterFbFilterFb();
     });
     $('#btnResetOffset').click(function () {
         offset = 0;
-        $('#btnStart').val('Start');
+        $('#btnFilterFb').val('Filter Fb');
     });
 
-    function start() {
+    function startFilterFbFilterFb() {
         $.ajax({
             type: 'JSON',
             method: 'POST',
             url: apiPath,
             data: {
+                filterWhat: 'fb',
                 offset: offset,
                 limit: limit,
                 _token: _token
@@ -30,9 +31,40 @@ $(document).ready(function () {
                 $('#inserting').text(response.insertedRows);
                 $('#inserted').text(totalInsertedRow);
 
-                setTimeout(start, 100);
+                setTimeout(startFilterFbFilterFb, 100);
             }else{
-                $('#btnStart').val('Finish');
+                $('#btnFilterFb').val('Finish');
+            }
+        });
+    }
+    // Filter google query
+    $('#btnFilterGgQuery').click(function () {
+        console.log('google');
+        startFilterGoogleQuery();
+    });
+    function startFilterGoogleQuery() {
+        $.ajax({
+            type: 'JSON',
+            method: 'POST',
+            url: apiPath,
+            data: {
+                filterWhat: 'gg',
+                offset: offset,
+                limit: limit,
+                _token: _token
+            }
+        }).done(function(response) {
+            if(response.countOriginData > 0){
+                // increase offset
+                offset = offset + limit;
+                totalInsertedRow += response.insertedRows;
+                $('#processingRow').text(offset);
+                $('#inserting').text(response.insertedRows);
+                $('#inserted').text(totalInsertedRow);
+
+                setTimeout(startFilterGoogleQuery, 100);
+            }else{
+                $('#btnFilterFb').val('Finish');
             }
         });
     }

